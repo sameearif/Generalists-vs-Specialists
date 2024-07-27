@@ -1,5 +1,6 @@
 from openai import OpenAI
 from together import Together
+import anthropic
 from prompts import *
 from datasets import load_dataset
 import pandas as pd
@@ -7,6 +8,7 @@ import numpy as np
 from scipy.stats import rankdata
 import os
 import ast
+import re
 from tqdm import tqdm
 
 class GPT():
@@ -27,6 +29,25 @@ class GPT():
             response_format={"type": "json_object"}
         )
         return completion.choices[0].message.content
+    
+class Claude():
+    def __init__(self, task):
+        self.client = anthropic.Anthropic(
+            api_key="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",
+        )
+        self.task = task
+
+    def forward(self, x):
+        messages = [
+            {"role": "user", "content": f"input: {x[0]}\n\noutput: {x[1]}"}
+        ]
+        completion = self.client.messages.create(
+            model="claude-3-5-sonnet-20240620",
+            max_tokens=1024,
+            system=CLAUDE_EVALUATION_PROMT[self.task],
+            messages=messages
+        )
+        return completion.content[0].text
     
 class LLaMA():
     def __init__(self, task):
@@ -57,6 +78,8 @@ class Evaluation():
             self.gpt = GPT(self.task)
         elif self.to_eval == "llama":
             self.llama = LLaMA(self.task) 
+        elif self.to_eval == "claude":
+            self.claude = Claude(self.task) 
 
     def eval_llama(self, input, i):
         if os.path.exists(f"human-evaluation/llama/scores/{self.task}.csv"):
@@ -94,6 +117,24 @@ class Evaluation():
 
             df.loc[i] = [reasoning, score]
             df.to_csv(f"human-evaluation/gpt/scores/{self.task}.csv", index=False)
+    
+    def eval_claude(self, input, i):
+        if os.path.exists(f"human-evaluation/claude/scores/{self.task}.csv"):
+            df = pd.read_csv(f"human-evaluation/claude/scores/{self.task}.csv")
+        else:
+            df = pd.DataFrame(columns=["reasoning", "score"])
+
+        if len(df) > i and df.iloc[i]["score"] != -1:
+            pass
+        else:
+            output = self.claude.forward(input)
+            matches = re.findall(r"### Score: (\d{1,3})/100", output)
+            score = matches[0]
+
+            reasoning = output
+
+            df.loc[i] = [reasoning, score]
+            df.to_csv(f"human-evaluation/claude/scores/{self.task}.csv", index=False)
 
     def eval(self):
         k = 0
@@ -105,6 +146,9 @@ class Evaluation():
                 if self.to_eval == "llama":
                     self.eval_llama([self.dataset["test"][i]["Input"], self.dataset["test"][i][f"M{j + 1}"]], k)
                 
+                if self.to_eval == "claude":
+                    self.eval_claude([self.dataset["test"][i]["Input"], self.dataset["test"][i][f"M{j + 1}"]], k)
+                
                 k += 1
 
     def generate_ranking(self):
@@ -114,6 +158,8 @@ class Evaluation():
             df_scores = pd.read_csv(f"human-evaluation/llama/scores/{self.task}.csv")
         elif self.to_eval == "gpt":
             df_scores = pd.read_csv(f"human-evaluation/gpt/scores/{self.task}.csv")
+        elif self.to_eval == "claude":
+            df_scores = pd.read_csv(f"human-evaluation/claude/scores/{self.task}.csv")
 
         for i in range(0, len(df_scores), 4):
             scores = []
@@ -134,9 +180,11 @@ class Evaluation():
             df.to_csv(f"human-evaluation/llama/ranks/{self.task}.csv", index=False)
         elif self.to_eval == "gpt":
             df.to_csv(f"human-evaluation/gpt/ranks/{self.task}.csv", index=False)
+        elif self.to_eval == "claude":
+            df.to_csv(f"human-evaluation/claude/ranks/{self.task}.csv", index=False)
 
         
 
-ev = Evaluation("summarization", "llama")
+ev = Evaluation("translation-ur-en", "claude")
 ev.eval()
 ev.generate_ranking()

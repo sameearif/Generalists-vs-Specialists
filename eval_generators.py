@@ -32,43 +32,60 @@ class GPT():
         elif self.task == "question-answering":
             messages = create_messages_question_answering(k, cot)
             x = f"Context:\n{x[0]}\n\nQuestion:\n{x[1]}"
+        elif self.task == "ai-assistant":
+            messages = [{"role": "system", "content": "Always answer in Pakistani Urdu language."}]
+            x += "\n\nAnswer in Pakistani Urdu only."
         x = str(x)
         
         messages.append({"role": "user", "content": x})
-        completion = self.client.chat.completions.create(
-            model="gpt-4-turbo",
-            messages=messages,
-            response_format={"type": "json_object"}
-        )
-        return completion.choices[0].message.content
+        if self.task == "ai-assistant":
+            completion = self.client.chat.completions.create(
+                model="gpt-4-turbo",
+                messages=messages,
+                # response_format={"type": "json_object"}
+            )
+            return completion.choices[0].message.content
+        else:
+            completion = self.client.chat.completions.create(
+                model="gpt-4-turbo",
+                messages=messages,
+                response_format={"type": "json_object"}
+            )
+            return completion.choices[0].message.content
     
 class LLaMA():
     def __init__(self, task):
         self.client = Together()
         self.task = task
 
-    def forward(self, x):
+    def forward(self, x, k=0, cot=False):
         if self.task == "translation-en-ur" or self.task == "translation-ur-en":
-            messages = create_messages_translation(self.task, 0)
+            messages = create_messages_translation(self.task, k, cot)
         elif self.task == "transliteration":
-            messages = create_messages_transliteration(0)
+            messages = create_messages_transliteration(k, cot)
         elif self.task == "summarization":
-            messages = create_messages_summarization(0)
+            messages = create_messages_summarization(k, cot)
         elif self.task == "paraphrase":
-            messages = create_messages_paraphrase(0)
+            messages = create_messages_paraphrase(k, cot)
         elif self.task == "question-answering":
-            messages = create_messages_question_answering(0)
+            messages = create_messages_question_answering(k, cot)
             x = f"Context:\n{x[0]}\n\nQuestion:\n{x[1]}"
+        elif self.task == "ai-assistant":
+            messages = [{"role": "system", "content": "Always answer in Pakistani Urdu language."}]
+            x += "\n\nAnswer in Pakistani Urdu only."
         x = str(x)
         
         messages.append({"role": "user", "content": x})
-        response = self.client.chat.completions.create(
-            model="meta-llama/Llama-3-8b-chat-hf",
-            messages=messages,
-            temperature=0.6,
-            top_p=0.9,
-        )
-        return response.choices[0].message.content
+        try:
+            response = self.client.chat.completions.create(
+                model="meta-llama/Llama-3-8b-chat-hf",
+                messages=messages,
+                temperature=0.6,
+                top_p=0.9,
+            )
+            return response.choices[0].message.content
+        except:
+            return ""
 
 class LLaMAFT():
     def __init__(self, task, device):
@@ -125,6 +142,8 @@ class MT5():
             x = f"Paraphrase: {x}"
         elif self.task == "question-answering":
             x = f"context: {x[0]} question: {x[1]}"
+        elif self.task == "ai-assistant":
+            x = f"Human: {x}"
         inputs = self.tokenizer.batch_encode_plus([x], truncation=True, padding="max_length", max_length=LENGTH_MAPPING_MT5[self.task]["input"], return_tensors="pt")
         outputs = self.model.generate(
             input_ids=inputs['input_ids'].to(self.device),
@@ -200,7 +219,10 @@ class Evaluation():
                 continue
             
             output = self.gpt.forward(input, k)
-            prediction = self.extract_output(output, key)
+            if self.task != "ai-assistant":
+                prediction = self.extract_output(output, key)
+            else:
+                prediction = output
             
             df.loc[i] = [prediction]
             df.to_csv(f"predictions/{self.task}/gpt-{k}-shot.csv", index=False, encoding="utf-8")
@@ -221,19 +243,41 @@ class Evaluation():
                 df.to_csv(f"predictions/{self.task}/gpt-cot.csv", index=False, encoding="utf-8")
     
     def eval_llama(self, input, key, i):
-        if os.path.exists(f"predictions/{self.task}/llama.csv"):
-            df = pd.read_csv(f"predictions/{self.task}/llama.csv")
-        else:
-            df = pd.DataFrame(columns=["prediction"])
+        for k in [0, 3, 6]:
+            if k not in self.k_shot:
+                continue
 
-        if len(df) > i and type(df.iloc[i]["prediction"]) == str:
-            pass
-        else:
-            output = self.llama.forward(input)
-            prediction = self.extract_output(output, key)
+            if os.path.exists(f"predictions/{self.task}/llama-{k}-shot.csv"):
+                df = pd.read_csv(f"predictions/{self.task}/llama-{k}-shot.csv")
+            else:
+                df = pd.DataFrame(columns=["prediction"])
+
+            if len(df) > i and type(df.iloc[i]["prediction"]) == str:
+                pass
+            else:
+                output = self.llama.forward(input, k)
+                if self.task != "ai-assistant":
+                    prediction = self.extract_output(output, key)
+                else:
+                    prediction = output
+                
+                df.loc[i] = [prediction]
+                df.to_csv(f"predictions/{self.task}/llama-{k}-shot.csv", index=False, encoding="utf-8")
+        
+        if self.cot:
+            if os.path.exists(f"predictions/{self.task}/llama-cot.csv"):
+                df = pd.read_csv(f"predictions/{self.task}/llama-cot.csv")
+            else:
+                df = pd.DataFrame(columns=["prediction"])
             
-            df.loc[i] = [prediction]
-            df.to_csv(f"predictions/{self.task}/llama.csv", index=False, encoding="utf-8")
+            if len(df) > i and type(df.iloc[i]["prediction"]) == str:
+                pass
+            else:
+                output = self.llama.forward(input, k, cot=True)
+                prediction = self.extract_output(output, key)
+
+                df.loc[i] = [prediction]
+                df.to_csv(f"predictions/{self.task}/llama-cot.csv", index=False, encoding="utf-8")
 
     def eval_llama_ft(self, input, key, i):
         if os.path.exists(f"predictions/{self.task}/llama-ft.csv"):
@@ -245,7 +289,10 @@ class Evaluation():
             pass
         else:
             output = self.llama_ft.forward(input)
-            prediction = self.extract_output(output, key)
+            if self.task != "ai-assistant":
+                prediction = self.extract_output(output, key)
+            else:
+                prediction = output
 
             df.loc[i] = [prediction]
             df.to_csv(f"predictions/{self.task}/llama-ft.csv", index=False, encoding="utf-8")
@@ -286,6 +333,8 @@ class Evaluation():
             elif self.task == "question-answering":
                 input = [self.dataset["test"][i]["context"], self.dataset["test"][i]["question"]]
                 key = "answer"
+            elif self.task == "ai-assistant":
+                input = self.dataset["test"][i]["input"]
 
             if self.to_eval == "gpt":
                 self.eval_gpt(input, key, i)
@@ -306,7 +355,7 @@ class Evaluation():
             y_true = []
             for i in true:
                 y_true.append(ast.literal_eval(i))
-            for model in ["gpt-0-shot", "gpt-3-shot", "gpt-6-shot", "mt5", "llama", "llama-ft"]:
+            for model in ["gpt-0-shot", "gpt-3-shot", "gpt-6-shot", "gpt-cot", "llama-0-shot", "llama-3-shot", "llama-6-shot", "llama-cot", "llama-ft", "xlm-roberta"]:
                 if os.path.exists(f"predictions/{self.task}/{model}.csv"):
                     df = pd.read_csv(f"predictions/{self.task}/{model}.csv")
                     y = df["prediction"].tolist()
@@ -323,7 +372,7 @@ class Evaluation():
         elif self.task == "summarization":
             rouge = {}
             references = self.dataset["test"]["summary"]
-            for model in ["gpt-0-shot", "gpt-3-shot", "gpt-6-shot", "mt5", "llama", "llama-ft"]:
+            for model in ["gpt-0-shot", "gpt-3-shot", "gpt-6-shot", "gpt-cot", "llama-0-shot", "llama-3-shot", "llama-6-shot", "llama-cot", "llama-ft", "xlm-roberta"]:
                 if os.path.exists(f"predictions/{self.task}/{model}.csv"):
                     df = pd.read_csv(f"predictions/{self.task}/{model}.csv")
                     predictions = df["prediction"].tolist()
@@ -338,7 +387,7 @@ class Evaluation():
             elif self.task == "translation-en-ur":
                 key = "urdu"
             references = self.dataset["test"][key]
-            for model in ["gpt-0-shot", "gpt-3-shot", "gpt-6-shot", "mt5", "llama", "llama-ft"]:
+            for model in ["gpt-0-shot", "gpt-3-shot", "gpt-6-shot", "gpt-cot", "llama-0-shot", "llama-3-shot", "llama-6-shot", "llama-cot", "llama-ft", "xlm-roberta"]:
                 if os.path.exists(f"predictions/{self.task}/{model}.csv"):
                     df = pd.read_csv(f"predictions/{self.task}/{model}.csv")
                     predictions = df["prediction"].tolist()
@@ -346,6 +395,6 @@ class Evaluation():
             return bleu
 
 
-ev = Evaluation("translation-en-ur", [], False, "llama", "mps")
-# ev.eval()
-print(ev.calcuate_metric())
+ev = Evaluation("ai-assistant", [0], False, "mt5", "mps")
+ev.eval()
+# print(ev.calcuate_metric())

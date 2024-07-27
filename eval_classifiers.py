@@ -41,17 +41,23 @@ class LLaMA():
         self.client = Together()
         self.task = task
     
-    def forward(self, x):
-        messages = create_messages_classifier(self.task, 0)
+    def forward(self, x, k, cot=False):
+        if cot:
+            messages = create_messages_cot_classifier(self.task)
+        else:
+            messages = create_messages_classifier(self.task, k)
         x = str(x)
         messages.append({"role": "user", "content": x})
-        response = self.client.chat.completions.create(
-            model="meta-llama/Llama-3-8b-chat-hf",
-            messages=messages,
-            temperature=0.6,
-            top_p=0.9,
-        )
-        return response.choices[0].message.content
+        try:
+            response = self.client.chat.completions.create(
+                model="meta-llama/Llama-3-8b-chat-hf",
+                messages=messages,
+                temperature=0.6,
+                top_p=0.9,
+            )
+            return response.choices[0].message.content
+        except:
+            return ""
 
 class LLaMAFT():
     def __init__(self, task, device):
@@ -264,23 +270,45 @@ class Evaluation():
                 df.to_csv(f"predictions/{self.task}/gpt-cot.csv", index=False)
 
     def eval_llama(self, input, i):
-        if os.path.exists(f"predictions/{self.task}/llama.csv"):
-            df = pd.read_csv(f"predictions/{self.task}/llama.csv")
-        else:
-            df = pd.DataFrame(columns=["prediction"])
-        
-        if len(df) > i and df.iloc[i]["prediction"] != -1:
-            pass
-        else:
-            if self.task == "ner-tagging" or self.task == "pos-tagging":
-                output = self.llama.forward(highlight_word(input, self.dataset["test"][i]["index"]))
+        for k in [0, 3, 6]:
+            if k not in self.k_shot:
+                continue
+            if os.path.exists(f"predictions/{self.task}/llama-{k}-shot.csv"):
+                df = pd.read_csv(f"predictions/{self.task}/llama-{k}-shot.csv")
             else:
-                output = self.llama.forward(input)
+                df = pd.DataFrame(columns=["prediction"])
             
-            prediction = self.extract_label(output)
+            if len(df) > i and df.iloc[i]["prediction"] != -1:
+                pass
+            else:
+                if self.task == "ner-tagging" or self.task == "pos-tagging":
+                    output = self.llama.forward(highlight_word(input, self.dataset["test"][i]["index"]), k)
+                else:
+                    output = self.llama.forward(input, k)
 
-            df.loc[i] = [prediction]
-            df.to_csv(f"predictions/{self.task}/llama.csv", index=False)
+                prediction = self.extract_label(output)
+
+                df.loc[i] = [prediction]
+                df.to_csv(f"predictions/{self.task}/llama-{k}-shot.csv", index=False)
+        
+        if self.cot:
+            if os.path.exists(f"predictions/{self.task}/llama-cot.csv"):
+                df = pd.read_csv(f"predictions/{self.task}/llama-cot.csv")
+            else:
+                df = pd.DataFrame(columns=["prediction"])
+
+            if len(df) > i and df.iloc[i]["prediction"] != -1:
+                pass
+            else:
+                if self.task == "ner-tagging" or self.task == "pos-tagging":
+                    output = self.llama.forward(highlight_word(input, self.dataset["test"][i]["index"]), k, cot=True)
+                else:
+                    output = self.llama.forward(input, k, cot=True)
+
+                prediction = self.extract_label(output)
+
+                df.loc[i] = [prediction]
+                df.to_csv(f"predictions/{self.task}/llama-cot.csv", index=False)
         
     def eval_llama_ft(self, input, i):
         if os.path.exists(f"predictions/{self.task}/llama-ft.csv"):
@@ -339,7 +367,7 @@ class Evaluation():
         f1 = {}
         accuracy = {}
         references = self.dataset["test"]["label"]
-        for model in ["gpt-0-shot", "gpt-3-shot", "gpt-6-shot", "gpt-cot", "llama", "llama-ft", "xlm-roberta"]:
+        for model in ["gpt-0-shot", "gpt-3-shot", "gpt-6-shot", "gpt-cot", "llama-0-shot", "llama-3-shot", "llama-6-shot", "llama-cot", "llama-ft", "xlm-roberta"]:
              if os.path.exists(f"predictions/{self.task}/{model}.csv"):
                 df = pd.read_csv(f"predictions/{self.task}/{model}.csv")
                 predictions = df["prediction"].tolist()
@@ -349,8 +377,8 @@ class Evaluation():
         return f1, accuracy
     
 
-ev = Evaluation("sarcasm-detection", [], False, "llama", "mps")
-# ev.eval()
+ev = Evaluation("ner-tagging", [], True, "llama", "mps")
+ev.eval()
 f1, accuracy = ev.calcuate_metric()
 print(f1)
 print("=========================")

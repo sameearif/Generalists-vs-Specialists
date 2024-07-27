@@ -5,6 +5,7 @@ LENGTH_MAPPING_MT5 = {
     "summarization": {"input": 1024, "output": 256},
     "paraphrase": {"input": 128, "output": 128},
     "question-answering": {"input": 512, "output": 100},
+    "ai-assistant": {"input": 512, "output": 512}
 }
 
 LENGTH_MAPPING_LLAMA = {
@@ -14,4 +15,5 @@ LENGTH_MAPPING_LLAMA = {
     "summarization": 1024,
     "paraphrase": 256,
     "question-answering": 128,
+    "ai-assistant": 2048,
 }

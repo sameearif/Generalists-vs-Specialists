@@ -27,7 +27,12 @@ class KrippendorffAlpha():
             a4 = df_llama[["M1", "M2", "M3", "M4"]].to_numpy()
             x.append(np.array(a4).flatten())
 
+        if self.to_eval == "claude" or self.to_eval == "all":
+            df_llama = pd.read_csv(f"human-evaluation/claude/ranks/{self.task}.csv")
+            a4 = df_llama[["M1", "M2", "M3", "M4"]].to_numpy()
+            x.append(np.array(a4).flatten())
+
         return krippendorff.alpha(reliability_data=x, level_of_measurement='ordinal')
 
-k = KrippendorffAlpha("summarization", "llama")
+k = KrippendorffAlpha("translation-en-ur", "claude")
 print(k.calculate_alpha())

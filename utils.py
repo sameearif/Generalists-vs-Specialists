@@ -17,8 +17,8 @@ def create_messages_classifier(task, k):
         if task == "ner-tagging" or task == "pos-tagging":
             input = highlight_word(string_to_list(input), df.iloc[i]["index"])
         messages.append({"role": "user", "content": input})
-        output = ids_to_label(df.iloc[i][cols[1]], task)
-        messages.append({"role": "assistant", "content": output})
+        output = {"label": ids_to_label(df.iloc[i][cols[1]], task)}
+        messages.append({"role": "assistant", "content": str(output)})
     
     return messages
 

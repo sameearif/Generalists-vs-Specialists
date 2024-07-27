@@ -195,3 +195,51 @@ EVALUATION_PROMT = {
     Think step by step and use reasoning. ALWAYS RETURN JSON OBJECT IN THE FOLLOWING FORMAT ONLY:
     {"reasoning": ..., "score": ...}""",
 }
+
+CLAUDE_EVALUATION_PROMT = {
+    "paraphrase": """You are a Pakistani Urdu language expert tasked with evaluating the quality of paraphrased text produced by the paraphrasing model. Score the given output with respect to the given input on a continuous score from 0 to 100 based on the following criteria:
+    1. Retains the original meaning and key ideas
+    2. No grammatical errors
+    3. Use of different words and phrases than the original text
+    Think step by step and use reasoning. ALWAYS RETURN YOUR ANSWER IN THE FOLLOWING FORMAT ONLY:
+    ### Reasoning:
+    [Add your reasoning here]
+    ### Score: X/100""",
+
+    "summarization": """You are a Pakistani Urdu language expert tasked with evaluating the quality of summary produced by the summarization model. Score the given output with respect to the given input on a continuous score from 0 to 100 based on the following criteria:
+    1. Includes main points and key information from the original text
+    2. No grammatical errors
+    3. Conveys information in a brief manner
+    4. Gives correct information based on the original text
+    Think step by step and use reasoning (reasoning should not be too big). ALWAYS RETURN YOUR ANSWER IN THE FOLLOWING FORMAT ONLY:
+    ### Reasoning:
+    [Add your reasoning here]
+    ### Score: X/100""",
+
+    "transliteration": """You are a Pakistani Urdu language expert tasked with evaluating the quality of transliterated text produced by the transliteration model. Score the given output with respect to the given input on a continuous score from 0 to 100 based on the following criteria:
+    1. Correctness of words (keeping  in mind that different words can have different spelling)
+    2. Proper capitalisation of words
+    Think step by step and use reasoning. ALWAYS RETURN YOUR ANSWER IN THE FOLLOWING FORMAT ONLY:
+    ### Reasoning:
+    [Add your reasoning here]
+    ### Score: X/100""",
+
+    "translation-en-ur": """You are a Pakistani Urdu language expert tasked with evaluating the quality of translated text produced by the translation model. Score the given output with respect to the given input on a continuous score from 0 to 100 based on the following criteria:
+    1. Conveys the meaning of the original text without omissions or additions
+    2. No grammatical errors
+    3. Retains the style and tone of the original text
+    Think step by step and use reasoning. ALWAYS RETURN YOUR ANSWER IN THE FOLLOWING FORMAT ONLY:
+    ### Reasoning:
+    [Add your reasoning here]
+    ### Score: X/100""",
+
+    "translation-ur-en": """You are a Pakistani Urdu language expert tasked with evaluating the quality of translated text produced by the translation model. Score the given output with respect to the given input on a continuous score from 0 to 100 based on the following criteria:
+    1. Conveys the meaning of the original text without omissions or additions
+    2. No grammatical errors
+    3. Retains the style and tone of the original text
+    Think step by step and use reasoning. ALWAYS RETURN YOUR ANSWER IN THE FOLLOWING FORMAT ONLY:
+    ### Reasoning:
+    [Add your reasoning here]
+    ### Score: X/100""",
+}
+
