@@ -104,6 +104,9 @@ class LLaMAFT():
         if self.task == "question-answering":
             input = f"<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\n{LLAMA_FT_PROMPTS[self.task]}<|eot_id|><|start_header_id|>user<|end_header_id|>\n\nContext:\n{x[0]}\n\nQuestion:\n{x[1]}<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n"
             return input
+        elif self.task == "ai-assistant":
+            input = f"<|begin_of_text|><|start_header_id|>user<|end_header_id|>\n\n{x}<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n"
+            return input
         input = f"<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\n{LLAMA_FT_PROMPTS[self.task]}<|eot_id|><|start_header_id|>user<|end_header_id|>\n\n{x}<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n"
         return input
 
