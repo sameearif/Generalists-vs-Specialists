@@ -34,5 +34,5 @@ class KrippendorffAlpha():
 
         return krippendorff.alpha(reliability_data=x, level_of_measurement='ordinal')
 
-k = KrippendorffAlpha("translation-en-ur", "claude")
+k = KrippendorffAlpha("ai-assistant", "claude")
 print(k.calculate_alpha())

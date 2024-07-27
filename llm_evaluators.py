@@ -39,13 +39,15 @@ class Claude():
 
     def forward(self, x):
         messages = [
-            {"role": "user", "content": f"input: {x[0]}\n\noutput: {x[1]}"}
+            {"role": "user", "content": f"input: {x[0]}\n\noutput: {x[1]}\n\nDo the evaluation in English."}
         ]
         completion = self.client.messages.create(
             model="claude-3-5-sonnet-20240620",
             max_tokens=1024,
             system=CLAUDE_EVALUATION_PROMT[self.task],
-            messages=messages
+            messages=messages,
+            temperature=1.0,
+            top_p=1.0
         )
         return completion.content[0].text
     
@@ -91,10 +93,26 @@ class Evaluation():
             pass
         else:
             output = self.llama.forward(input)
-
-            output = ast.literal_eval(output)
-            reasoning = output["reasoning"]
-            score = output["score"]
+            print(output)
+            try:
+                output = ast.literal_eval(output)
+                reasoning = output["reasoning"]
+                score = output["score"]
+            except:
+                try:
+                    matches = re.findall(r"\"score\": (\d{1,3})", output)
+                    score = matches[0]
+                    reasoning = output
+                except:
+                    try:
+                        matches = re.findall(r"Score: (\d{1,3})", output)
+                        score = matches[0]
+                        reasoning = output
+                    except:
+                        matches = re.findall(r"**Score**: (\d{1,3})", output)
+                        score = matches[0]
+                        reasoning = output
+                    
 
             df.loc[i] = [reasoning, score]
             df.to_csv(f"human-evaluation/llama/scores/{self.task}.csv", index=False)
@@ -111,9 +129,24 @@ class Evaluation():
         else:
             output = self.gpt.forward(input)
 
-            output = ast.literal_eval(output)
-            reasoning = output["reasoning"]
-            score = output["score"]
+            try:
+                output = ast.literal_eval(output)
+                reasoning = output["reasoning"]
+                score = output["score"]
+            except:
+                try:
+                    matches = re.findall(r"\"score\": (\d{1,3})", output)
+                    score = matches[0]
+                    reasoning = output
+                except:
+                    try:
+                        matches = re.findall(r"Score: (\d{1,3})", output)
+                        score = matches[0]
+                        reasoning = output
+                    except:
+                        matches = re.findall(r"**Score**: (\d{1,3})", output)
+                        score = matches[0]
+                        reasoning = output
 
             df.loc[i] = [reasoning, score]
             df.to_csv(f"human-evaluation/gpt/scores/{self.task}.csv", index=False)
@@ -127,7 +160,9 @@ class Evaluation():
         if len(df) > i and df.iloc[i]["score"] != -1:
             pass
         else:
+            print(input)
             output = self.claude.forward(input)
+            print(output)
             matches = re.findall(r"### Score: (\d{1,3})/100", output)
             score = matches[0]
 
@@ -185,6 +220,6 @@ class Evaluation():
 
         
 
-ev = Evaluation("translation-ur-en", "claude")
+ev = Evaluation("ai-assistant", "claude")
 ev.eval()
 ev.generate_ranking()

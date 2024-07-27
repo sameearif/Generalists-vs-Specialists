@@ -194,6 +194,9 @@ EVALUATION_PROMT = {
     3. Retains the style and tone of the original text
     Think step by step and use reasoning. ALWAYS RETURN JSON OBJECT IN THE FOLLOWING FORMAT ONLY:
     {"reasoning": ..., "score": ...}""",
+
+    "ai-assistant": """Please act as an impartial judge and evaluate the quality of the response provided by an AI assistant to the user question displayed below. Your evaluation should consider factors such as the helpfulness, relevance, accuracy, depth, creativity, and level of detail of the response. Begin your evaluation by providing a short explanation. Be as objective as possible. After providing your explanation, please rate the response on a scale of 0 to 100. ALWAYS RETURN JSON OBJECT IN THE FOLLOWING FORMAT ONLY:
+    {"reasoning": ..., "score": ...}"""
 }
 
 CLAUDE_EVALUATION_PROMT = {
@@ -241,5 +244,10 @@ CLAUDE_EVALUATION_PROMT = {
     ### Reasoning:
     [Add your reasoning here]
     ### Score: X/100""",
+
+    "ai-assistant": """Please act as an impartial judge and evaluate the quality of the response provided by an AI assistant to the user question displayed below. Your evaluation should consider factors such as the helpfulness, relevance, accuracy, depth, creativity, and level of detail of the response. Begin your evaluation by providing a short explanation. Be as objective as possible. After providing your explanation, please rate the response on a scale of 0 to 100 by strictly following this format:
+    ### Reasoning:
+    [Give reasoning in English]
+    ### Score: X/100"""
 }
 

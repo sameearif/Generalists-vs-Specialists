@@ -113,12 +113,17 @@ class LLaMAFT():
     def forward(self, x):
         x = self.format_input(x)
         input_ids = self.tokenizer(x, return_tensors="pt").to(self.device)
+        terminators = [
+            self.tokenizer.convert_tokens_to_ids("<|end_of_text|>"),
+            self.tokenizer.convert_tokens_to_ids("<|eot_id|>"),
+        ]
         outputs = self.model.generate(
             **input_ids,
             max_new_tokens=LENGTH_MAPPING_LLAMA[self.task],
             temperature=0.6,
             top_p=0.9,
-            pad_token_id=self.tokenizer.eos_token_id
+            pad_token_id=self.tokenizer.eos_token_id,
+            eos_token_id=terminators
         )
         output = self.tokenizer.decode(outputs[0])
         return output.split("assistant<|end_header_id|>\n\n")[-1].replace("<|eot_id|>", "")
@@ -311,6 +316,8 @@ class Evaluation():
             pass
         else:
             prediction = self.mt5.forward(input)
+            if self.task == "ai-assistant":
+                prediction = prediction.replace("Assistant: ", "")
 
             df.loc[i] = [prediction]
             df.to_csv(f"predictions/{self.task}/mt5.csv", index=False, encoding="utf-8")
