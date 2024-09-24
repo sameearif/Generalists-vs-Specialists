@@ -13,9 +13,7 @@ from tqdm import tqdm
 
 class GPT():
     def __init__(self, task):
-        self.client = OpenAI(
-                organization='org-OWe4x5PWbYh2yljPFA9odbCD',
-            )
+        self.client = OpenAI()
         self.task = task
 
     def forward(self, x):
@@ -32,9 +30,7 @@ class GPT():
     
 class Claude():
     def __init__(self, task):
-        self.client = anthropic.Anthropic(
-            api_key="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",
-        )
+        self.client = anthropic.Anthropic()
         self.task = task
 
     def forward(self, x):
