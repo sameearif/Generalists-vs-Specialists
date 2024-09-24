@@ -17,9 +17,7 @@ import random
 
 class GPT():
     def __init__(self, task):
-        self.client = OpenAI(
-                organization='org-OWe4x5PWbYh2yljPFA9odbCD',
-            )
+        self.client = OpenAI()
         self.task = task
 
     def forward(self, x, k, cot=False):
